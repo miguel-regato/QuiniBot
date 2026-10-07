@@ -41,8 +41,7 @@ export function JornadaView() {
   const [jornada, setJornada] = useState<DetalleJornada | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulación de contexto global isAdmin (Temporal)
-  const isAdmin = true;
+  const isAdmin = localStorage.getItem('quinibot_admin') === 'true';
 
   useEffect(() => {
     async function loadJornada() {
