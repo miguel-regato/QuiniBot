@@ -1,0 +1,12 @@
+{
+    "rewrites": [
+        {
+            "source": "/api-selae/:path*",
+            "destination": "https://www.loteriasyapuestas.es/servicios/:path*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
