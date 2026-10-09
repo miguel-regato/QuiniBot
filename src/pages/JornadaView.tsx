@@ -185,6 +185,12 @@ export function JornadaView() {
 
                       {/* PREDICCIONES DE JUGADORES - SOLO SI SUBIDA */}
                       {jornada.quinielaSubida && jornada.columnas.map((col, colIdx) => {
+                        if (isP15 && colIdx > 0) {
+                          return (
+                            <td key={colIdx} className="p-4 bg-slate-800/10 border-l border-slate-700/30"></td>
+                          );
+                        }
+
                         const isElige8 = colIdx === 0 && col.elige8Partidos?.includes(partido.numero as number);
 
                         const valorMostrar = isP15
@@ -194,7 +200,11 @@ export function JornadaView() {
                         let esAcierto = false;
                         if (partido.estado === 'FINALIZADO') {
                           if (isP15) {
-                            esAcierto = Boolean(col.pleno15 && partido.plenoGoles && col.pleno15.trim() === partido.plenoGoles.trim());
+                            esAcierto = Boolean(
+                              col.pleno15 &&
+                              partido.plenoGoles &&
+                              col.pleno15.trim() === partido.plenoGoles.trim()
+                            );
                           } else {
                             const pronostico = col.pronosticos[idx] ? col.pronosticos[idx].trim() : '';
                             const resultado = partido.resultado1X2 ? partido.resultado1X2.trim() : '';
