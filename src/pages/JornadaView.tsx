@@ -77,15 +77,7 @@ export function JornadaView() {
     }
   };
 
-  const getPredictionColor = (partido: Partido, pronostico: string) => {
-    if (partido.estado === 'FINALIZADO') {
-      if (partido.numero === 'P-15') {
-        return partido.plenoGoles === pronostico ? 'bg-emerald-600/80' : 'bg-rose-600/80';
-      }
-      return partido.resultado1X2 === pronostico ? 'bg-emerald-600/80' : 'bg-rose-600/80';
-    }
-    return 'bg-slate-700'; // NO_EMPEZADO o EN_JUEGO
-  };
+
 
   if (isLoading) {
     return (
@@ -194,19 +186,33 @@ export function JornadaView() {
                       {/* PREDICCIONES DE JUGADORES - SOLO SI SUBIDA */}
                       {jornada.quinielaSubida && jornada.columnas.map((col, colIdx) => {
                         const isElige8 = colIdx === 0 && col.elige8Partidos?.includes(partido.numero as number);
-                        const prediction = isP15 ? (colIdx === 0 ? col.pronosticos[14] : '-') : col.pronosticos[idx];
-                        const bgClass = isP15 && colIdx > 0 ? 'bg-transparent' : getPredictionColor(partido, prediction);
+
+                        const valorMostrar = isP15
+                          ? (col.pleno15 || '-')
+                          : col.pronosticos[idx];
+
+                        let esAcierto = false;
+                        if (partido.estado === 'FINALIZADO') {
+                          if (isP15) {
+                            esAcierto = Boolean(col.pleno15 && partido.plenoGoles && col.pleno15.trim() === partido.plenoGoles.trim());
+                          } else {
+                            const pronostico = col.pronosticos[idx] ? col.pronosticos[idx].trim() : '';
+                            const resultado = partido.resultado1X2 ? partido.resultado1X2.trim() : '';
+                            esAcierto = Boolean(pronostico && resultado && pronostico.includes(resultado));
+                          }
+                        }
+
+                        let bgClass = 'bg-slate-700';
+                        if (partido.estado === 'FINALIZADO') {
+                          bgClass = esAcierto ? 'bg-emerald-600/80' : 'bg-rose-600/80';
+                        }
 
                         return (
                           <td key={colIdx} className="p-4 text-center bg-slate-800/10 border-l border-slate-700/30">
                             <div className="flex justify-center items-center">
-                              {isP15 && colIdx > 0 ? (
-                                <span className="text-slate-600 font-bold text-lg">-</span>
-                              ) : (
-                                <div className={`min-w-[2rem] px-2 h-8 flex items-center justify-center font-bold text-sm text-white rounded shadow-sm transition-all ${bgClass} ${isElige8 ? 'ring-2 ring-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)]' : ''}`}>
-                                  {prediction}
-                                </div>
-                              )}
+                              <div className={`min-w-[2rem] px-2 h-8 flex items-center justify-center font-bold text-sm text-white rounded shadow-sm transition-all ${bgClass} ${isElige8 ? 'ring-2 ring-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)]' : ''}`}>
+                                {valorMostrar}
+                              </div>
                             </div>
                           </td>
                         );

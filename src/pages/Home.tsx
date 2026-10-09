@@ -29,38 +29,39 @@ export function Home() {
     async function loadData() {
       try {
         const jornadasDB = await getJornadas();
-        // Mapear de DetalleJornada a la interfaz Jornada simple de la Home
-        let tempJornadas: Jornada[] = jornadasDB.map(j => ({
+        const jornadasAPI = await obtenerUltimasJornadas();
+        const fusionadas: any[] = [];
+
+        for (const jornadaAPI of jornadasAPI) {
+          const dbData = jornadasDB.find(j => j.id === jornadaAPI.id);
+
+          if (!dbData) {
+            jornadaAPI.quinielaSubida = false;
+            await saveJornada(jornadaAPI);
+            fusionadas.push(jornadaAPI);
+          } else {
+            const jornadaActualizada = { ...dbData, estado: jornadaAPI.estado, partidos: jornadaAPI.partidos };
+            await saveJornada(jornadaActualizada);
+            fusionadas.push(jornadaActualizada);
+          }
+        }
+
+        for (const db of jornadasDB) {
+          if (!fusionadas.find(j => j.id === db.id)) {
+            fusionadas.push(db);
+          }
+        }
+
+        fusionadas.sort((a, b) => b.numero - a.numero);
+
+        const jornadasParaEstado = fusionadas.map(j => ({
           id: j.id,
           numero: j.numero,
           estado: j.estado as 'NO_COMENZADA' | 'EN_PROGRESO' | 'TERMINADA',
           quinielaSubida: j.quinielaSubida
         }));
 
-        const jornadasAPI = await obtenerUltimasJornadas();
-        const nuevasJornadas: Jornada[] = [];
-
-        for (const jornadaAPI of jornadasAPI) {
-          const existe = tempJornadas.find(j => j.id === jornadaAPI.id);
-          if (!existe) {
-            jornadaAPI.quinielaSubida = false;
-            await saveJornada(jornadaAPI);
-            
-            nuevasJornadas.push({
-              id: jornadaAPI.id,
-              numero: jornadaAPI.numero,
-              estado: jornadaAPI.estado,
-              quinielaSubida: false
-            });
-          }
-        }
-        
-        // Fusionar
-        const fusionado = [...tempJornadas, ...nuevasJornadas];
-        
-        // Orden DESCENDENTE
-        fusionado.sort((a, b) => b.numero - a.numero);
-        setJornadas(fusionado);
+        setJornadas(jornadasParaEstado);
       } catch (error) {
         console.error('Error al sincronizar jornadas:', error);
       } finally {

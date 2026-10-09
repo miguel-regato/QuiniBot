@@ -60,16 +60,61 @@ export async function obtenerUltimasJornadas(): Promise<any[]> {
         golesLocal: gLocal !== undefined ? gLocal : null,
         golesVisitante: gVisit !== undefined ? gVisit : null,
         plenoGoles: plenoG || null,
-        estado: p.signo ? 'FINALIZADO' : 'NO_EMPEZADO',
+        estado: (isP15 ? plenoG : p.signo) ? 'FINALIZADO' : 'NO_EMPEZADO',
         fecha: p.fecha ? p.fecha.replace(/-/g, '/') : '',
         hora: p.hora || ''
       };
     });
 
+    // NUEVO: Comprobamos si ha terminado diferenciando entre el P-15 y los demás
+    const todosTerminados = partidosMap.length > 0 && partidosMap.every((p: any) => {
+      if (p.numero === 'P-15') {
+        return p.plenoGoles !== null || p.resultado1X2 !== null;
+      }
+      return p.resultado1X2 !== null;
+    });
+
+    const ahora = new Date();
+    const algunEmpezado = partidosMap.some((p: any) => {
+      // NUEVO: Misma lógica para ver si alguno ya tiene resultado
+      const tieneResultado = p.numero === 'P-15' ? (p.plenoGoles !== null || p.resultado1X2 !== null) : p.resultado1X2 !== null;
+      if (tieneResultado) return true;
+
+      if (p.fecha) {
+        try {
+          const parts = p.fecha.split('/');
+          if (parts.length === 3) {
+            const year = parts[0].length === 4 ? parts[0] : parts[2];
+            const month = parts[1];
+            const day = parts[0].length === 4 ? parts[2] : parts[0];
+            const horaParts = (p.hora || '00:00').split(':');
+            const fechaPartido = new Date(
+              parseInt(year, 10),
+              parseInt(month, 10) - 1,
+              parseInt(day, 10),
+              parseInt(horaParts[0], 10),
+              parseInt(horaParts[1], 10)
+            );
+            return ahora > fechaPartido;
+          }
+        } catch (e) {
+          // Ignorar fechas inválidas
+        }
+      }
+      return false;
+    });
+
+    let estadoJornada = 'NO_COMENZADA';
+    if (todosTerminados) {
+      estadoJornada = 'TERMINADA';
+    } else if (algunEmpezado) {
+      estadoJornada = 'EN_PROGRESO';
+    }
+
     return {
-      id: `${sorteo.temporada}_J${sorteo.jornada}`, // Ej: "2026-2027_J7"
+      id: `${sorteo.temporada}_J${sorteo.jornada}`,
       numero: parseInt(sorteo.jornada, 10),
-      estado: 'EN_PROGRESO',
+      estado: estadoJornada,
       quinielaSubida: false,
       partidos: partidosMap,
       columnas: []
