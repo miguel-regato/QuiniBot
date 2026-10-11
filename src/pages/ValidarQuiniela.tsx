@@ -4,26 +4,6 @@ import { Loader2, Trash2, Plus, AlertTriangle, ArrowRight, Check } from 'lucide-
 import { analizarBoleto } from '../lib/gemini';
 import { saveJornada } from '../lib/db';
 
-// Mock Data
-const MOCK_MATCHES = [
-  { id: 1, local: 'Real Madrid', visitor: 'Barcelona' },
-  { id: 2, local: 'Atlético', visitor: 'Sevilla' },
-  { id: 3, local: 'Betis', visitor: 'Valencia' },
-  { id: 4, local: 'Athletic', visitor: 'Real Sociedad' },
-  { id: 5, local: 'Villarreal', visitor: 'Getafe' },
-  { id: 6, local: 'Osasuna', visitor: 'Celta' },
-  { id: 7, local: 'Mallorca', visitor: 'Girona' },
-  { id: 8, local: 'Alavés', visitor: 'Las Palmas' },
-  { id: 9, local: 'Rayo Vallecano', visitor: 'Almería' },
-  { id: 10, local: 'Granada', visitor: 'Cádiz' },
-  { id: 11, local: 'Espanyol', visitor: 'Valladolid' },
-  { id: 12, local: 'Zaragoza', visitor: 'Sporting' },
-  { id: 13, local: 'Levante', visitor: 'Elche' },
-  { id: 14, local: 'Tenerife', visitor: 'Eibar' },
-];
-
-const MOCK_P15 = { local: 'España', visitor: 'Italia' };
-
 type Prediction = '1' | 'X' | '2' | null;
 type P15Prediction = '0' | '1' | '2' | 'M' | null;
 
@@ -37,7 +17,7 @@ interface Column {
 export const ValidarQuiniela: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { imageFile, jornadaOriginal } = location.state || {};
+  const { imageFile, jornadaOriginal, isEditMode } = location.state || {};
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,13 +29,13 @@ export const ValidarQuiniela: React.FC = () => {
     id: typeof p.numero === 'number' ? p.numero : Number(p.numero),
     local: p.local,
     visitor: p.visitante
-  })) || MOCK_MATCHES;
+  }));
 
   const p15Partido = jornadaOriginal?.partidos.find((p: any) => p.numero === 'P-15');
-  const p15 = p15Partido ? { local: p15Partido.local, visitor: p15Partido.visitante } : MOCK_P15;
+  const p15 = p15Partido ? { local: p15Partido.local, visitor: p15Partido.visitante } : null;
 
   useEffect(() => {
-    if (!imageFile || !jornadaOriginal) {
+    if (!jornadaOriginal || (!imageFile && !isEditMode)) {
       navigate(-1);
       return;
     }
@@ -64,12 +44,11 @@ export const ValidarQuiniela: React.FC = () => {
       hasFetched.current = true;
 
       async function analyze() {
-        try {
-          const datosIA = await analizarBoleto(imageFile);
+        if (isEditMode) {
+          // --- MODO EDICIÓN: Cargamos los datos de la base de datos ---
+          setElige8Ids(jornadaOriginal.columnas[0]?.elige8Partidos || []);
 
-          setElige8Ids(datosIA.elige8 || []);
-
-          const newCols: Column[] = datosIA.columnas.map((c: any, index: number) => {
+          const existingCols: Column[] = jornadaOriginal.columnas.map((c: any, index: number) => {
             let p15Local: P15Prediction = null;
             let p15Visitor: P15Prediction = null;
 
@@ -84,21 +63,51 @@ export const ValidarQuiniela: React.FC = () => {
             return {
               id: crypto.randomUUID(),
               name: c.nombre || `Columna ${index + 1}`,
-              predictions: c.pronosticos.map((p: string | null) => p as Prediction),
+              predictions: c.pronosticos.map((p: string | null) => (p ? p.trim() as Prediction : null)),
               p15: { local: p15Local, visitor: p15Visitor }
             };
           });
 
-          setColumns(newCols);
+          setColumns(existingCols);
           setIsLoading(false);
-        } catch (err: any) {
-          setErrorMsg(err.message || 'Error al analizar el boleto');
-          setIsLoading(false);
+        } else {
+          // --- MODO CREACIÓN: Analizar imagen con Gemini (Tu código original) ---
+          try {
+            const datosIA = await analizarBoleto(imageFile);
+
+            setElige8Ids(datosIA.elige8 || []);
+
+            const newCols: Column[] = datosIA.columnas.map((c: any, index: number) => {
+              let p15Local: P15Prediction = null;
+              let p15Visitor: P15Prediction = null;
+
+              if (index === 0 && c.pleno15) {
+                const parts = c.pleno15.split('-');
+                if (parts.length === 2) {
+                  p15Local = parts[0] as P15Prediction;
+                  p15Visitor = parts[1] as P15Prediction;
+                }
+              }
+
+              return {
+                id: crypto.randomUUID(),
+                name: c.nombre || `Columna ${index + 1}`,
+                predictions: c.pronosticos.map((p: string | null) => p as Prediction),
+                p15: { local: p15Local, visitor: p15Visitor }
+              };
+            });
+
+            setColumns(newCols);
+            setIsLoading(false);
+          } catch (err: any) {
+            setErrorMsg(err.message || 'Error al analizar el boleto');
+            setIsLoading(false);
+          }
         }
       }
       analyze();
     }
-  }, [imageFile, jornadaOriginal, navigate]);
+  }, [imageFile, jornadaOriginal, isEditMode, navigate]);
 
   // Validation Logic
   const errors: string[] = [];
@@ -230,7 +239,7 @@ export const ValidarQuiniela: React.FC = () => {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
         <Loader2 className="w-16 h-16 animate-spin text-blue-500 mb-6" />
         <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent animate-pulse">
-          Analizando boleto con IA...
+          {isEditMode ? 'Cargando quiniela guardada...' : 'Analizando boleto con IA...'}
         </h2>
       </div>
     );

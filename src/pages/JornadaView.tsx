@@ -67,7 +67,11 @@ export function JornadaView() {
   }, [id]);
 
   const handleEdit = () => {
-    alert("Función para editar datos de la jornada.");
+    if (jornada) {
+      navigate(`/jornada/${jornada.id}/validar`, {
+        state: { jornadaOriginal: jornada, isEditMode: true }
+      });
+    }
   };
 
   const handleCaptura = (e: React.ChangeEvent<HTMLInputElement>) => {
