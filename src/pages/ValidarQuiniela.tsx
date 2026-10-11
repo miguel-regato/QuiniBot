@@ -393,7 +393,7 @@ export const ValidarQuiniela: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-bold text-purple-400">Pleno al 15</span>
-                    <span className="text-xs text-gray-400">{p15.local} vs {p15.visitor}</span>
+                    <span className="text-xs text-gray-400">{p15?.local} vs {p15?.visitor}</span>
                   </div>
                 </div>
 
@@ -411,7 +411,7 @@ export const ValidarQuiniela: React.FC = () => {
                     <div key={col.id} className="w-48 shrink-0 flex flex-col gap-3">
                       {/* Local P15 */}
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wider text-center">{p15.local}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wider text-center">{p15?.local}</span>
                         <div className="flex bg-gray-800/50 rounded-lg p-1 gap-1">
                           {(['0', '1', '2', 'M'] as P15Prediction[]).map((val) => {
                             const isSelected = col.p15.local === val;
@@ -433,7 +433,7 @@ export const ValidarQuiniela: React.FC = () => {
 
                       {/* Visitor P15 */}
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wider text-center">{p15.visitor}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wider text-center">{p15?.visitor}</span>
                         <div className="flex bg-gray-800/50 rounded-lg p-1 gap-1">
                           {(['0', '1', '2', 'M'] as P15Prediction[]).map((val) => {
                             const isSelected = col.p15.visitor === val;
